@@ -177,14 +177,14 @@ class Game
   end
 
   def player_turn
-    puts "Your cards are #{player.hand}. Your total value is #{player.hand.value}."
 
-    case
-    when player.hand.value == BLACKJACK
+    v = player.hand.value
+    puts "Your cards are #{player.hand}. Your total value is #{v}."
+
+    case v
+    when BLACKJACK
       puts "You got Blackjack!"
-    when player.hand.value > BLACKJACK
-      puts "Sorry #{player.name}, you're busted!"
-    else
+    when (0..20)
       print "Would you like a hit or stay #{player.name}? (H/S)"
       player_choice = gets.chomp.downcase
 
@@ -192,6 +192,8 @@ class Game
         player.hand << deck.deal
         player_turn
       end
+    else 
+      puts "Sorry #{player.name}, you're busted!"
     end
   end
 
