@@ -2,42 +2,28 @@
 # 10/29/14
 # Blackjack OOP
 
-BLACKJACK = 21
-
 class Card
   attr_reader :suit, :rank
 
-  def initialize
-    @suit = ["\u2660", "\u2663", "\u2665", "\u2666"]
-    @rank = %w{Ace 2 3 4 5 6 7 8 9 10 Jack Queen King}
+  def initialize(r, s)
+    @suit = s
+    @rank = r
   end
 end
 
 class Deck
-  attr_reader :deck
+  attr_reader :cards
 
   def initialize(number_of_decks = 1)
-    @deck = []
-    card = Card.new
+    @cards = []
 
-    card.suit.each do |s|
-      card.rank.each do |r|
-        @deck << {r => s}
+    ["\u2660", "\u2663", "\u2665", "\u2666"].each do |suit|
+      ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King'].each do |rank|
+        @cards << Card.new(rank, suit.encode('utf-8'))
       end
     end
-    @deck *= number_of_decks
-  end
 
-  def <<(card)
-    deck.push(card)
-  end
-
-  def size
-    deck.size
-  end
-
-  def deal
-    deck.pop
+    @cards *= number_of_decks
   end
 
   def shuffle
@@ -48,21 +34,75 @@ class Deck
       sleep 1 
     end
     puts
-    deck.shuffle!  
+    cards.shuffle!  
+  end
+
+  def deal
+    cards.pop
+  end
+
+  def size
+    cards.size
+  end
+
+  def << card
+    cards.push(card)
   end
 end
 
 class Player
-  class Hand #cannot be instantiated without a player
+  class Hand
     include Comparable
     attr_accessor :dealt_cards
 
     def initialize
-      @dealt_cards = [] #player's hand starts out empty
+      @dealt_cards = []
+    end
+
+    def value
+      sum = 0
+      
+      dealt_cards.each do |card|
+        if card.rank == 'Ace'
+          sum += 11
+        elsif card.rank.to_i == 0
+          sum += 10
+        else
+          sum += card.rank.to_i
+        end
+      end
+
+      dealt_cards.select {|card| card.rank == 'Ace'}.count.times do
+        sum -= 10 if sum > 21
+      end
+
+      sum
+    end
+
+    def to_s
+      string = []
+      
+      dealt_cards.each do |card| #cards are card objects
+        string << "#{card.rank} of #{card.suit}"
+      end
+  
+      string.join(' and ') #won't call join on a single array (single card)
     end
 
     def <=>(opponent)
       dealt_cards.value <=> opponent.dealt_cards.value
+    end
+
+    def << card
+      dealt_cards.push(card)
+    end
+
+    def size
+      dealt_cards.size
+    end
+
+    def last
+      dealt_cards.last
     end
 
     def each(&block)
@@ -72,88 +112,23 @@ class Player
     def clear
       dealt_cards.clear
     end
-
-    def last
-      dealt_cards.last.flatten
-    end
-
-    def << card
-      dealt_cards.push(card)
-    end
-
-    def pop
-      dealt_cards.pop
-    end
-
-    def to_s
-      string = []
-      
-      dealt_cards.each do |card| #cards are card objects
-        card.each do |rank, suit|
-          string << "#{rank} of #{suit.encode('utf-8')}"
-        end
-      end
-      string.join(' and ') #won't call join on a single array (single card)
-    end
-
-    # check value of cards in a hand
-    def value
-      sum = 0
-      
-      dealt_cards.each do |card|
-        card.each_key do |rank|
-          if rank == 'Ace'
-            sum += 11
-          elsif rank.to_i == 0
-            sum += 10
-          else
-            sum += rank.to_i
-          end
-        end
-      end
-
-      dealt_cards.select {|card| card.key('Ace')}.count.times do
-        sum -= 10 if sum > BLACKJACK 
-      end
-
-      sum
-    end
   end
 
-  class Bank
-    attr_accessor :balance
-
-    def initialize(amount)
-      @balance = amount
-    end
-
-    def to_s
-      puts "Your balance is: $#{self.balance}.00"
-    end
-
-    def +(amount) # win money
-      balance += amount
-    end
-
-    def -(amount) # lose money
-      balance -= amount
-    end
-  end
-
-  attr_accessor :hand, :bank
   attr_reader :name
+  attr_accessor :hand
 
   def initialize(n)
     @name = n
     @hand = Hand.new
-    @bank = Bank.new(500)
   end
 end
 
 class Game
-  attr_accessor :player, :dealer, :deck
-  #   place bet - minimum $5, increments of 5, maximum $100
-  #   verify bet
+  BLACKJACK = 21
+
+  attr_reader :player, :dealer
+  attr_accessor :deck
+
   def initialize
     puts "Welcome to Blackjack!"
     print "Howdy stranger, what's your name? "
@@ -173,7 +148,8 @@ class Game
       player.hand << deck.deal
       dealer.hand << deck.deal
     end
-    puts "Dealer's face up card is a #{dealer.hand.last[0]} of #{dealer.hand.last[1]}"
+
+    puts "Dealer's face up card is a #{dealer.hand.last.rank} of #{dealer.hand.last.suit}"
   end
 
   def player_turn
@@ -198,15 +174,17 @@ class Game
   end
 
   def dealer_turn
-    puts "The dealer's cards are #{dealer.hand}. Their total value is #{dealer.hand.value}."
 
-    case dealer.hand.value
+    v = dealer.hand.value
+    puts "The dealer's cards are #{dealer.hand}. Their total value is #{v}."
+
+    case v
     when BLACKJACK
       puts "Dealer has Blackjack!"
     when (17..BLACKJACK)
       sleep 1
       puts "=> Dealer stays"
-    when (0..16)
+    when (2..16)
       puts "=> Dealer takes a hit"
       sleep 1
       dealer.hand << deck.deal
@@ -217,10 +195,14 @@ class Game
   end
 
   def winner
+
+    pv = player.hand.value
+    dv = dealer.hand.value
+
     case
-    when player.hand.value > dealer.hand.value || dealer.hand.value > BLACKJACK
+    when pv > dv || dv > BLACKJACK || (pv == BLACKJACK && player.hand.size == 2)
       puts "You win!"
-    when player.hand.value == dealer.hand.value
+    when pv == dv
       puts "It's a push (tie)!"
     else
       puts "You lose!"
@@ -241,14 +223,7 @@ class Game
   end
 
   def clear_game
-    player.hand.each do |card|
-      deck << card
-    end
-
-    dealer.hand.each do |card|
-      deck << card
-    end
-
+    deck = Deck.new(3)
     player.hand.clear
     dealer.hand.clear
   end
@@ -257,24 +232,17 @@ class Game
     begin
       start_game
       player_turn
+      winner
 
-      if player.hand.value <= BLACKJACK
+      if player.hand.value < BLACKJACK
         dealer_turn
         winner
       end
       clear_game
-
+      
     end until replay? == false
     puts "Thanks for playing #{player.name}"
   end
 end
 
 Game.new.play
-
-
-
-
-
-
-
-
