@@ -163,7 +163,7 @@ class Game
   end
 
   def winner
-
+    
     case
     when player.value > dealer.value
       puts "You win!"
