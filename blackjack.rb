@@ -59,11 +59,6 @@ module Hand
 
     sum
   end
-
-  def natural?
-    value == Game::BLACKJACK && hand.count == 2
-  end
-
 end
 
 class Player 
@@ -100,7 +95,7 @@ class Game
     print "Howdy stranger, what's your name? "
 
     @player = Player.new(gets.chomp)
-    @dealer = Player.new('House')
+    @dealer = Player.new('Dealer')
     @deck   = Deck.new(3)
 
     puts "Nice to meet you #{player.name}. Let's play some Blackjack!"
@@ -115,20 +110,18 @@ class Game
     player.hand << deck.deal
     dealer.hand << deck.deal
     
-    puts "Dealer's face up card is a #{dealer.hand.last.rank} of #{dealer.hand.last.suit}"
+    puts "#{dealer.name}'s face up card is a #{dealer.hand.last.rank} of #{dealer.hand.last.suit}"
   end
 
   def player_turn
 
-    puts "#{player.name}'s cards are #{player.show_hand}. Your total value is #{player.value}."
+    total = player.value
 
-    case player.value
-    when player.natural?
-      puts "You win!"
-      replay
-    when BLACKJACK
+    puts "#{player.name}'s cards are #{player.show_hand}. Your total value is #{total}."
+
+    if total == BLACKJACK
       puts "=> You got Blackjack!"
-    when (2..20)
+    elsif total < BLACKJACK
       print "Would you like a hit or stay #{player.name}? (H/S)"
       player_choice = gets.chomp.downcase
 
@@ -136,7 +129,7 @@ class Game
         player.hand << deck.deal
         player_turn
       end
-    else 
+    else
       puts "=> Sorry #{player.name}, you're busted!"
       replay
     end
@@ -144,15 +137,16 @@ class Game
 
   def dealer_turn
 
-    puts "The dealer's cards are #{dealer.show_hand}. Their total value is #{dealer.value}."
+    total = dealer.value
 
-    case dealer.value
-    when BLACKJACK
+    puts "#{dealer.name}'s cards are #{dealer.show_hand}. Their total value is #{total}."
+
+    if total == BLACKJACK
       puts "=> Dealer has Blackjack!"
-    when (DEALER_MIN..BLACKJACK)
+    elsif (DEALER_MIN..BLACKJACK).cover?(total)
       sleep 1
       puts "=> Dealer stays"
-    when (2...DEALER_MIN)
+    elsif (2...DEALER_MIN).cover?(total)
       puts "=> Dealer takes a hit"
       sleep 1
       dealer.hand << deck.deal
@@ -163,12 +157,11 @@ class Game
     end
   end
 
-  def winner
-    
-    case
-    when player.value > dealer.value
+  def whos_the_winner
+
+    if player.value > dealer.value
       puts "You win!"
-    when player.value == dealer.value
+    elsif player.value == dealer.value
       puts "It's a push (tie)!"
     else
       puts "You lose!"
@@ -178,7 +171,6 @@ class Game
   def replay
     loop do
       puts "Would you like to play again? (Y/N)"
-
       answer = gets.chomp.downcase
 
       if answer == 'y'
@@ -206,7 +198,7 @@ class Game
     deal_cards
     player_turn
     dealer_turn
-    winner
+    whos_the_winner
     replay
   end
 end
