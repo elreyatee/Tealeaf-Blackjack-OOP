@@ -158,7 +158,8 @@ class Game
       dealer.hand << deck.deal
       dealer_turn
     else
-      puts "=> Dealer has busted."
+      puts "=> Dealer has busted. You won!"
+      replay
     end
   end
 
